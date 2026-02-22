@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TicketRenamer.Console/TicketRenamer.Console.csproj" />
+    <Project Path="src/TicketRenamer.Core/TicketRenamer.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TicketRenamer.Core.Tests/TicketRenamer.Core.Tests.csproj" />
+  </Folder>
+</Solution>
