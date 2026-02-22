@@ -1,0 +1,64 @@
+{
+  "providers": [
+    {
+      "names": ["MERCADONA", "MERCADONA S.A.", "MERCADONA, S.A."],
+      "normalizedName": "Mercadona"
+    },
+    {
+      "names": ["CARREFOUR", "CARREFOUR EXPRESS", "CARREFOUR MARKET", "CARREFOUR S.A."],
+      "normalizedName": "Carrefour"
+    },
+    {
+      "names": ["LIDL", "LIDL SUPERMERCADOS", "LIDL SUPERMERCADOS S.A.U."],
+      "normalizedName": "Lidl"
+    },
+    {
+      "names": ["DIA", "DIA %", "DIA MARKET", "DISTRIBUIDORA INTERNACIONAL DE ALIMENTACION"],
+      "normalizedName": "Dia"
+    },
+    {
+      "names": ["ALDI", "ALDI SUPERMERCADOS", "ALDI S.L."],
+      "normalizedName": "Aldi"
+    },
+    {
+      "names": ["AHORRAMAS", "AHORRA MAS", "AHORAMAS"],
+      "normalizedName": "Ahorramas"
+    },
+    {
+      "names": ["CONSUM", "CONSUM S. COOP. V.", "CONSUM COOPERATIVA"],
+      "normalizedName": "Consum"
+    },
+    {
+      "names": ["BONAREA", "BON AREA", "BONAREA AGRUPA"],
+      "normalizedName": "BonArea"
+    },
+    {
+      "names": ["EROSKI", "EROSKI CENTER", "EROSKI CITY", "EROSKI S. COOP."],
+      "normalizedName": "Eroski"
+    },
+    {
+      "names": ["ALCAMPO", "ALCAMPO S.A.", "ALCAMPO HIPERMERCADO"],
+      "normalizedName": "Alcampo"
+    },
+    {
+      "names": ["EL CORTE INGLES", "SUPERMERCADO EL CORTE INGLES", "HIPERCOR"],
+      "normalizedName": "ElCorteIngles"
+    },
+    {
+      "names": ["MASYMAS", "MAS Y MAS", "MAS&MAS"],
+      "normalizedName": "MasyMas"
+    },
+    {
+      "names": ["COVIRAN", "COVIRAN S.C.A."],
+      "normalizedName": "Coviran"
+    },
+    {
+      "names": ["SPAR", "SPAR EXPRESS", "SPAR GRAN CANARIA"],
+      "normalizedName": "Spar"
+    },
+    {
+      "names": ["BM", "BM SUPERMERCADOS"],
+      "normalizedName": "BM"
+    }
+  ]
+}
