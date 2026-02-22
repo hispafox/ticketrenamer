@@ -1,5 +1,4 @@
 using System.IO;
-using System.Net.Http.Headers;
 using System.Windows;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,15 +33,9 @@ public partial class App : Application
                 var section = context.Configuration.GetSection("TicketRenamer");
 
                 // Core services
-                services.AddHttpClient<IOcrService, GroqVisionService>((sp, client) =>
-                {
-                    var settingsService = sp.GetRequiredService<ISettingsService>();
-                    var apiKey = settingsService.GroqApiKey;
-                    if (string.IsNullOrWhiteSpace(apiKey))
-                        apiKey = Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? "";
-                    if (!string.IsNullOrWhiteSpace(apiKey))
-                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-                });
+                services.AddTransient<ApiKeyDelegatingHandler>();
+                services.AddHttpClient<IOcrService, GroqVisionService>()
+                    .AddHttpMessageHandler<ApiKeyDelegatingHandler>();
 
                 services.AddSingleton<IBackupService, BackupService>();
                 services.AddSingleton<ILogService>(sp =>
