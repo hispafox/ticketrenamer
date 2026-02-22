@@ -1,0 +1,185 @@
+<Window x:Class="TicketRenamer.Wpf.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="clr-namespace:TicketRenamer.Wpf.Converters"
+        Title="TicketRenamer v1.1" Height="700" Width="1100"
+        MinHeight="500" MinWidth="800"
+        WindowStartupLocation="CenterScreen"
+        AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver"
+        FontFamily="Segoe UI" FontSize="13">
+
+    <Window.Resources>
+        <converters:StatusToColorConverter x:Key="StatusToColor" />
+        <converters:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <converters:FileSizeConverter x:Key="FileSize" />
+    </Window.Resources>
+
+    <DockPanel>
+
+        <!-- TOOLBAR -->
+        <ToolBar DockPanel.Dock="Top" Margin="0,0,0,1">
+            <Button Content="Actualizar" Command="{Binding RefreshFilesCommand}" Padding="8,4" />
+            <Separator />
+            <Button Content="Procesar" Command="{Binding StartProcessingCommand}" Padding="8,4"
+                    FontWeight="SemiBold" />
+            <Button Content="Detener" Command="{Binding StopProcessingCommand}" Padding="8,4" />
+            <Separator />
+            <CheckBox Content="Vigilar carpeta" IsChecked="{Binding IsWatchMode}"
+                      Command="{Binding ToggleWatchModeCommand}" VerticalAlignment="Center" Margin="4,0" />
+            <CheckBox Content="Dry-run" IsChecked="{Binding IsDryRun}"
+                      VerticalAlignment="Center" Margin="4,0" />
+            <Separator />
+            <Button Content="Configuracion" Command="{Binding OpenSettingsCommand}" Padding="8,4" />
+        </ToolBar>
+
+        <!-- STATUS BAR -->
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Pendientes: " Foreground="Gray" />
+                    <TextBlock Text="{Binding PendingCount}" FontWeight="SemiBold" />
+                    <TextBlock Text="  Procesando: " Foreground="Gray" Margin="10,0,0,0" />
+                    <TextBlock Text="{Binding ProcessingCount}" FontWeight="SemiBold" Foreground="#0078D4" />
+                    <TextBlock Text="  OK: " Foreground="Gray" Margin="10,0,0,0" />
+                    <TextBlock Text="{Binding CompletedCount}" FontWeight="SemiBold" Foreground="#107C10" />
+                    <TextBlock Text="  Fallidos: " Foreground="Gray" Margin="10,0,0,0" />
+                    <TextBlock Text="{Binding FailedCount}" FontWeight="SemiBold" Foreground="#C4271C" />
+                </StackPanel>
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- MAIN 3-PANEL CONTENT -->
+        <Grid Margin="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="250" MinWidth="150" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" MinWidth="200" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="300" MinWidth="200" />
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT PANEL: File List -->
+            <DockPanel Grid.Column="0" Background="White">
+                <Border DockPanel.Dock="Top" Background="#F8F8F8"
+                        BorderBrush="#E5E5E5" BorderThickness="0,0,0,1">
+                    <TextBlock Text="Archivos" FontWeight="SemiBold" Padding="8,6" />
+                </Border>
+                <ListBox ItemsSource="{Binding Files}"
+                         SelectedItem="{Binding SelectedFile}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="4,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="14" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Ellipse Grid.Column="0" Width="8" Height="8"
+                                         Fill="{Binding State, Converter={StaticResource StatusToColor}}" />
+                                <TextBlock Grid.Column="1" Text="{Binding FileName}"
+                                           TextTrimming="CharacterEllipsis" Margin="4,0,4,0" />
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding FileSize, Converter={StaticResource FileSize}}"
+                                           Foreground="Gray" FontSize="11" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
+                          Background="#E5E5E5" />
+
+            <!-- CENTER PANEL: Image Preview -->
+            <Border Grid.Column="2" Background="#F0F0F0">
+                <Grid>
+                    <!-- Placeholder text when no image -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Visibility="{Binding PreviewImage, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                        <TextBlock Text="Selecciona un ticket" FontSize="16"
+                                   Foreground="Gray" HorizontalAlignment="Center" />
+                        <TextBlock Text="o arrastra imagenes aqui" FontSize="12"
+                                   Foreground="LightGray" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                    </StackPanel>
+
+                    <!-- Image preview -->
+                    <Image Source="{Binding PreviewImage}"
+                           Stretch="Uniform" Margin="10"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           Visibility="{Binding PreviewImage, Converter={StaticResource BoolToVis}}" />
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch"
+                          Background="#E5E5E5" />
+
+            <!-- RIGHT PANEL: Details + Log -->
+            <Grid Grid.Column="4" Background="White">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- File Details -->
+                <Border Grid.Row="0" BorderBrush="#E5E5E5" BorderThickness="0,0,0,1" Padding="10">
+                    <StackPanel>
+                        <TextBlock Text="Detalles" FontWeight="SemiBold" Margin="0,0,0,8" />
+
+                        <!-- Show when file is selected -->
+                        <StackPanel DataContext="{Binding SelectedFile}"
+                                    Visibility="{Binding Converter={StaticResource BoolToVis}}">
+                            <TextBlock>
+                                <Run Text="Archivo: " Foreground="Gray" />
+                                <Run Text="{Binding FileName, Mode=OneWay}" />
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="Tamano: " Foreground="Gray" />
+                                <Run Text="{Binding FileSize, Converter={StaticResource FileSize}, Mode=OneWay}" />
+                            </TextBlock>
+                            <TextBlock>
+                                <Run Text="Estado: " Foreground="Gray" />
+                                <Run Text="{Binding State, Mode=OneWay}" />
+                            </TextBlock>
+                            <TextBlock Visibility="{Binding NewFileName, Converter={StaticResource BoolToVis}}">
+                                <Run Text="Nuevo nombre: " Foreground="Gray" />
+                                <Run Text="{Binding NewFileName, Mode=OneWay}" Foreground="#107C10" FontWeight="SemiBold" />
+                            </TextBlock>
+                            <TextBlock TextWrapping="Wrap"
+                                       Visibility="{Binding ErrorMessage, Converter={StaticResource BoolToVis}}">
+                                <Run Text="Error: " Foreground="Gray" />
+                                <Run Text="{Binding ErrorMessage, Mode=OneWay}" Foreground="#C4271C" />
+                            </TextBlock>
+                        </StackPanel>
+
+                        <!-- Show when no file selected -->
+                        <TextBlock Text="Selecciona un archivo para ver detalles" Foreground="Gray"
+                                   Visibility="{Binding SelectedFile, Converter={StaticResource BoolToVis}, ConverterParameter=invert}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Processing Log -->
+                <DockPanel Grid.Row="1">
+                    <Border DockPanel.Dock="Top" Background="White"
+                            BorderBrush="#E5E5E5" BorderThickness="0,0,0,1">
+                        <TextBlock Text="Registro" FontWeight="SemiBold" Padding="10,8" />
+                    </Border>
+                    <ListBox ItemsSource="{Binding LogMessages}"
+                             FontFamily="Consolas" FontSize="11"
+                             BorderThickness="0" Padding="4">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="4,2" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+                </DockPanel>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

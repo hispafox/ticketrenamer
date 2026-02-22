@@ -7,7 +7,8 @@ Windows desktop app (.NET 8) that automates renaming purchase receipt photos fro
 
 ### Projects
 - `src/TicketRenamer.Core` - Class Library: business logic, OCR, parsing, file operations
-- `src/TicketRenamer.Console` - Console App: CLI interface with System.CommandLine
+- `src/TicketRenamer.Console` - Console App: CLI interface with appsettings.json
+- `src/TicketRenamer.Wpf` - WPF Desktop App: MVVM GUI with CommunityToolkit.Mvvm
 - `tests/TicketRenamer.Core.Tests` - xUnit tests
 
 ### Key Directories
@@ -23,11 +24,19 @@ Windows desktop app (.NET 8) that automates renaming purchase receipt photos fro
 5. Log each operation to registro.txt
 6. Validate: entrada/ empty, backup count == procesados count
 
+### WPF Architecture (v1.1)
+- MVVM with CommunityToolkit.Mvvm ([ObservableProperty], [RelayCommand])
+- DI via Microsoft.Extensions.Hosting (Generic Host)
+- IProgress<ProcessingResult> for real-time per-file progress reporting
+- 3-panel layout: file list | image preview | details + log
+- Drag & drop, watch mode, dry-run toggle
+
 ## Commands
 ```bash
 dotnet build                    # Build solution
 dotnet test                     # Run all tests (51 tests)
 dotnet run --project src/TicketRenamer.Console -- --input ./entrada --output ./procesados --backup ./backup --verbose
+dotnet run --project src/TicketRenamer.Wpf    # Launch WPF GUI
 ```
 
 ## Configuration
