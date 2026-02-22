@@ -25,7 +25,10 @@ public sealed class ProcessingPipeline : IProcessingPipeline
         _log = log;
     }
 
-    public async Task<List<ProcessingResult>> ProcessAllAsync(ProcessingOptions options, CancellationToken ct = default)
+    public Task<List<ProcessingResult>> ProcessAllAsync(ProcessingOptions options, CancellationToken ct = default)
+        => ProcessAllAsync(options, progress: null, ct);
+
+    public async Task<List<ProcessingResult>> ProcessAllAsync(ProcessingOptions options, IProgress<ProcessingResult>? progress, CancellationToken ct = default)
     {
         var results = new List<ProcessingResult>();
 
@@ -83,6 +86,7 @@ public sealed class ProcessingPipeline : IProcessingPipeline
                     ErrorMessage = ex.Message
                 };
                 results.Add(failResult);
+                progress?.Report(failResult);
                 await _logService.LogOperationAsync(fileName, null, false, $"Backup failed: {ex.Message}");
                 // Fail-fast: stop processing if backup fails
                 return results;
@@ -96,6 +100,7 @@ public sealed class ProcessingPipeline : IProcessingPipeline
             var fileName = Path.GetFileName(file);
             var result = await ProcessSingleFileAsync(file, options, ct);
             results.Add(result);
+            progress?.Report(result);
 
             if (result.Status == ProcessingStatus.Success)
             {

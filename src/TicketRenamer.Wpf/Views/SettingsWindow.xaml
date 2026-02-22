@@ -1,0 +1,78 @@
+<Window x:Class="TicketRenamer.Wpf.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Configuracion - TicketRenamer" Height="480" Width="550"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        FontFamily="Segoe UI" FontSize="13">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Input Folder -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="Carpeta de entrada:" DockPanel.Dock="Top" Margin="0,0,0,3" />
+            <Button Content="..." DockPanel.Dock="Right" Width="30" Margin="4,0,0,0"
+                    Command="{Binding BrowseInputFolderCommand}" />
+            <TextBox Text="{Binding InputFolder, UpdateSourceTrigger=PropertyChanged}" />
+        </DockPanel>
+
+        <!-- Output Folder -->
+        <DockPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="Carpeta de procesados:" DockPanel.Dock="Top" Margin="0,0,0,3" />
+            <Button Content="..." DockPanel.Dock="Right" Width="30" Margin="4,0,0,0"
+                    Command="{Binding BrowseOutputFolderCommand}" />
+            <TextBox Text="{Binding OutputFolder, UpdateSourceTrigger=PropertyChanged}" />
+        </DockPanel>
+
+        <!-- Backup Folder -->
+        <DockPanel Grid.Row="2" Margin="0,0,0,10">
+            <TextBlock Text="Carpeta de backup:" DockPanel.Dock="Top" Margin="0,0,0,3" />
+            <Button Content="..." DockPanel.Dock="Right" Width="30" Margin="4,0,0,0"
+                    Command="{Binding BrowseBackupFolderCommand}" />
+            <TextBox Text="{Binding BackupFolder, UpdateSourceTrigger=PropertyChanged}" />
+        </DockPanel>
+
+        <!-- Log File Path -->
+        <DockPanel Grid.Row="3" Margin="0,0,0,10">
+            <TextBlock Text="Archivo de registro:" DockPanel.Dock="Top" Margin="0,0,0,3" />
+            <TextBox Text="{Binding LogFilePath, UpdateSourceTrigger=PropertyChanged}" />
+        </DockPanel>
+
+        <!-- Provider Dictionary Path -->
+        <DockPanel Grid.Row="4" Margin="0,0,0,10">
+            <TextBlock Text="Diccionario de proveedores:" DockPanel.Dock="Top" Margin="0,0,0,3" />
+            <TextBox Text="{Binding ProviderDictionaryPath, UpdateSourceTrigger=PropertyChanged}" />
+        </DockPanel>
+
+        <!-- API Key -->
+        <DockPanel Grid.Row="5" Margin="0,0,0,10">
+            <TextBlock Text="Groq API Key:" DockPanel.Dock="Top" Margin="0,0,0,3" />
+            <TextBox Text="{Binding GroqApiKey, UpdateSourceTrigger=PropertyChanged}" />
+        </DockPanel>
+
+        <!-- Verbose -->
+        <CheckBox Grid.Row="6" Content="Modo verbose (registro detallado)"
+                  IsChecked="{Binding Verbose}" Margin="0,0,0,10" />
+
+        <!-- Spacer -->
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Guardar" Command="{Binding SaveCommand}"
+                    Width="100" Padding="8,6" IsDefault="True"
+                    Click="OnSaveClick" />
+            <Button Content="Cancelar" Width="100" Padding="8,6" Margin="10,0,0,0"
+                    IsCancel="True" />
+        </StackPanel>
+    </Grid>
+</Window>

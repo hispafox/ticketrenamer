@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/TicketRenamer.Console/TicketRenamer.Console.csproj" />
     <Project Path="src/TicketRenamer.Core/TicketRenamer.Core.csproj" />
+    <Project Path="src/TicketRenamer.Wpf/TicketRenamer.Wpf.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TicketRenamer.Core.Tests/TicketRenamer.Core.Tests.csproj" />
