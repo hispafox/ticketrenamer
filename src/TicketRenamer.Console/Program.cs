@@ -1,69 +1,163 @@
-using System.CommandLine;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using TicketRenamer.Console;
 using TicketRenamer.Core.Models;
 using TicketRenamer.Core.Parsers;
 using TicketRenamer.Core.Services;
 
-var inputOption = new Option<DirectoryInfo>("--input", "Input folder with ticket images") { IsRequired = true };
-var outputOption = new Option<DirectoryInfo>("--output", "Output folder for renamed files") { IsRequired = true };
-var backupOption = new Option<DirectoryInfo>("--backup", "Backup folder for originals") { IsRequired = true };
-var logOption = new Option<FileInfo?>("--log", "Path to log file (default: registro.txt in parent folder)");
-var dryRunOption = new Option<bool>("--dry-run", "Simulate without moving files");
-var verboseOption = new Option<bool>("--verbose", "Show detailed processing info");
+var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
 
-var rootCommand = new RootCommand("TicketRenamer - Intelligent ticket renaming system using OCR")
+// --setup flag: open configuration menu
+if (args.Contains("--setup"))
 {
-    inputOption, outputOption, backupOption, logOption, dryRunOption, verboseOption
+    SetupWizard.Run(configPath);
+    return 0;
+}
+
+// Load configuration from appsettings.json + environment variables
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+    .AddEnvironmentVariables()
+    .Build();
+
+var section = configuration.GetSection("TicketRenamer");
+
+var inputFolder = section["InputFolder"] ?? @"C:\Tickets\entrada";
+var outputFolder = section["OutputFolder"] ?? @"C:\Tickets\procesados";
+var backupFolder = section["BackupFolder"] ?? @"C:\Tickets\backup";
+var logFilePath = section["LogFilePath"] ?? @"C:\Tickets\registro.txt";
+var providerDictPath = section["ProviderDictionaryPath"] ?? "proveedores.json";
+var dryRun = bool.TryParse(section["DryRun"], out var dr) && dr;
+var verbose = !bool.TryParse(section["Verbose"], out var vb) || vb; // default true
+var watch = bool.TryParse(section["Watch"], out var w) && w;
+
+// API key: appsettings.json > environment variable
+var apiKey = section["GroqApiKey"];
+if (string.IsNullOrWhiteSpace(apiKey))
+    apiKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
+
+// CLI overrides (simple flags, not System.CommandLine - keep it lightweight)
+if (args.Contains("--dry-run")) dryRun = true;
+if (args.Contains("--verbose")) verbose = true;
+if (args.Contains("--watch")) watch = true;
+if (args.Contains("--quiet")) verbose = false;
+
+// First-time setup: if no config exists and no API key, launch wizard
+if (!File.Exists(configPath) || string.IsNullOrWhiteSpace(apiKey))
+{
+    Console.WriteLine("No se encontro configuracion o falta la API key de Groq.");
+    Console.Write("Deseas configurar ahora? (S/n): ");
+    var answer = Console.ReadLine()?.Trim();
+    if (string.IsNullOrEmpty(answer) || answer.StartsWith("s", StringComparison.OrdinalIgnoreCase))
+    {
+        SetupWizard.Run(configPath);
+
+        // Reload config after setup
+        configuration = new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+            .AddEnvironmentVariables()
+            .Build();
+
+        section = configuration.GetSection("TicketRenamer");
+        inputFolder = section["InputFolder"] ?? inputFolder;
+        outputFolder = section["OutputFolder"] ?? outputFolder;
+        backupFolder = section["BackupFolder"] ?? backupFolder;
+        logFilePath = section["LogFilePath"] ?? logFilePath;
+        providerDictPath = section["ProviderDictionaryPath"] ?? providerDictPath;
+        dryRun = bool.TryParse(section["DryRun"], out dr) && dr;
+        verbose = !bool.TryParse(section["Verbose"], out vb) || vb;
+        watch = bool.TryParse(section["Watch"], out w) && w;
+        apiKey = section["GroqApiKey"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+            apiKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
+    }
+}
+
+if (string.IsNullOrWhiteSpace(apiKey))
+{
+    Console.Error.WriteLine("ERROR: No se ha configurado la API key de Groq.");
+    Console.Error.WriteLine("Ejecuta con --setup para configurar, o establece GROQ_API_KEY como variable de entorno.");
+    return 2;
+}
+
+var options = new ProcessingOptions
+{
+    InputFolder = inputFolder,
+    OutputFolder = outputFolder,
+    BackupFolder = backupFolder,
+    LogFilePath = logFilePath,
+    ProviderDictionaryPath = providerDictPath,
+    DryRun = dryRun,
+    Verbose = verbose
 };
 
-rootCommand.SetHandler(async (input, output, backup, log, dryRun, verbose) =>
+// Load provider dictionary
+var dictionary = LoadProviderDictionary(providerDictPath);
+
+// Setup services
+var httpClient = new HttpClient();
+httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+var ocrService = new GroqVisionService(httpClient);
+var backupService = new BackupService();
+var logService = new LogService(logFilePath);
+var providerMatcher = new ProviderMatcher(dictionary);
+Action<string> logger = Console.WriteLine;
+
+var pipeline = new ProcessingPipeline(ocrService, backupService, logService, providerMatcher, verbose ? logger : null);
+
+// Display configuration
+Console.WriteLine("╔══════════════════════════════════════════╗");
+Console.WriteLine("║         TicketRenamer v1.0               ║");
+Console.WriteLine("╚══════════════════════════════════════════╝");
+Console.WriteLine($"  Entrada:    {options.InputFolder}");
+Console.WriteLine($"  Procesados: {options.OutputFolder}");
+Console.WriteLine($"  Backup:     {options.BackupFolder}");
+Console.WriteLine($"  Registro:   {options.LogFilePath}");
+if (dryRun) Console.WriteLine("  [MODO DRY-RUN] No se moveran archivos.");
+if (watch) Console.WriteLine("  [MODO WATCH] Vigilando carpeta de entrada...");
+Console.WriteLine();
+
+if (watch)
 {
-    var apiKey = Environment.GetEnvironmentVariable("GROQ_API_KEY");
-    if (string.IsNullOrWhiteSpace(apiKey))
-    {
-        Console.Error.WriteLine("ERROR: GROQ_API_KEY environment variable is not set.");
-        Console.Error.WriteLine("Set it with: set GROQ_API_KEY=your_api_key_here");
-        Environment.ExitCode = 2;
-        return;
-    }
+    // Watch mode: monitor folder for new files
+    using var watcher = new FolderWatcher(pipeline, options, logger);
+    watcher.Start();
 
-    var logPath = log?.FullName ?? Path.Combine(input.Parent?.FullName ?? input.FullName, "registro.txt");
+    // Process any existing files first
+    await RunBatch(pipeline, options);
 
-    var options = new ProcessingOptions
+    // Wait until Ctrl+C
+    var cts = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) =>
     {
-        InputFolder = input.FullName,
-        OutputFolder = output.FullName,
-        BackupFolder = backup.FullName,
-        LogFilePath = logPath,
-        DryRun = dryRun,
-        Verbose = verbose
+        e.Cancel = true;
+        cts.Cancel();
+        Console.WriteLine("\nDeteniendo...");
     };
 
-    // Load provider dictionary
-    var dictionary = LoadProviderDictionary(options.ProviderDictionaryPath);
+    try
+    {
+        await Task.Delay(Timeout.Infinite, cts.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        // Normal shutdown
+    }
 
-    // Setup services
-    var httpClient = new HttpClient();
-    httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+    watcher.Stop();
+    return 0;
+}
+else
+{
+    // Single batch mode
+    return await RunBatch(pipeline, options);
+}
 
-    var ocrService = new GroqVisionService(httpClient);
-    var backupService = new BackupService();
-    var logService = new LogService(logPath);
-    var providerMatcher = new ProviderMatcher(dictionary);
-
-    Action<string>? logger = verbose ? Console.WriteLine : null;
-
-    var pipeline = new ProcessingPipeline(ocrService, backupService, logService, providerMatcher, logger);
-
-    if (dryRun)
-        Console.WriteLine("[DRY-RUN MODE] No files will be moved.");
-
-    Console.WriteLine($"Input:   {options.InputFolder}");
-    Console.WriteLine($"Output:  {options.OutputFolder}");
-    Console.WriteLine($"Backup:  {options.BackupFolder}");
-    Console.WriteLine($"Log:     {logPath}");
-    Console.WriteLine();
-
+static async Task<int> RunBatch(ProcessingPipeline pipeline, ProcessingOptions options)
+{
     try
     {
         var results = await pipeline.ProcessAllAsync(options);
@@ -72,35 +166,28 @@ rootCommand.SetHandler(async (input, output, backup, log, dryRun, verbose) =>
         var failCount = results.Count(r => r.Status != ProcessingStatus.Success);
 
         Console.WriteLine();
-        Console.WriteLine($"Results: {successCount} succeeded, {failCount} failed out of {results.Count} total.");
+        Console.WriteLine($"Resultado: {successCount} procesados, {failCount} fallidos de {results.Count} total.");
 
         foreach (var result in results.Where(r => r.Status != ProcessingStatus.Success))
         {
-            Console.WriteLine($"  FAILED: {result.OriginalFileName} - {result.Status}: {result.ErrorMessage}");
+            Console.WriteLine($"  FALLO: {result.OriginalFileName} - {result.Status}: {result.ErrorMessage}");
         }
 
         if (results.Any(r => r.Status == ProcessingStatus.BackupFailed))
-            Environment.ExitCode = 2;
-        else if (failCount > 0)
-            Environment.ExitCode = 1;
-        else
-            Environment.ExitCode = 0;
+            return 2;
+        return failCount > 0 ? 1 : 0;
     }
     catch (Exception ex)
     {
-        Console.Error.WriteLine($"CRITICAL ERROR: {ex.Message}");
-        Environment.ExitCode = 2;
+        Console.Error.WriteLine($"ERROR CRITICO: {ex.Message}");
+        return 2;
     }
-
-}, inputOption, outputOption, backupOption, logOption, dryRunOption, verboseOption);
-
-return await rootCommand.InvokeAsync(args);
+}
 
 static ProviderDictionary LoadProviderDictionary(string path)
 {
     if (!File.Exists(path))
     {
-        // Try next to the executable
         var exeDir = AppContext.BaseDirectory;
         var altPath = Path.Combine(exeDir, Path.GetFileName(path));
         if (File.Exists(altPath))
